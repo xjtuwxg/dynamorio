@@ -281,6 +281,16 @@ global_data_destroy(per_thread_t *data)
     thread_data_destroy(NULL, data);
 }
 
+static void
+global_data_reset(per_thread_t **data)
+{
+    dr_printf("log: %s\n", (*data)->logname);
+    // free the bb_table resource.
+    drtable_destroy((*data)->bb_table, data);
+    // allocate per_thread_t *data, create a new bb_table and a log file.
+    *data = thread_data_create(NULL);
+}
+
 /****************************************************************************
  * Event Callbacks
  */
@@ -511,6 +521,16 @@ drcovlib_exit(void)
     drx_exit();
     drmgr_exit();
 
+    return DRCOVLIB_SUCCESS;
+}
+
+drcovlib_status_t
+drcovlib_dump_exec_phase(void)
+{
+    if (!drcov_per_thread) {
+        dump_drcov_data(NULL, global_data);
+        global_data_reset(&global_data);
+    }
     return DRCOVLIB_SUCCESS;
 }
 

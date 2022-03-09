@@ -56,6 +56,7 @@
 
 static uint verbose;
 static bool nudge_kills;
+static bool nudge_dump_exec_phase;
 static client_id_t client_id;
 
 #define NOTIFY(level, ...)                   \
@@ -72,7 +73,16 @@ static client_id_t client_id;
 
 enum {
     NUDGE_TERMINATE_PROCESS = 1,
+    NUDGE_DUMP_COV          = 2,
 };
+
+static void
+event_nudge_dump_coverage(void)
+{
+    dr_printf("dump the code coverage for current execution phase.\n");
+    drcovlib_dump_exec_phase();
+    return;
+}
 
 static void
 event_nudge(void *drcontext, uint64 argument)
@@ -86,8 +96,12 @@ event_nudge(void *drcontext, uint64 argument)
         if (count == 1) {
             dr_exit_process(exit_arg);
         }
+    } else if (nudge_arg == NUDGE_DUMP_COV) {
+        event_nudge_dump_coverage();
+        return;
     }
-    ASSERT(nudge_arg == NUDGE_TERMINATE_PROCESS, "unsupported nudge");
+    ASSERT((nudge_arg == NUDGE_TERMINATE_PROCESS) ||
+        (nudge_arg == NUDGE_TERMINATE_PROCESS), "unsupported nudge");
     ASSERT(false, "should not reach"); /* should not reach */
 }
 
@@ -125,6 +139,7 @@ options_init(client_id_t id, int argc, const char *argv[], drcovlib_options_t *o
     const char *token;
     /* default values */
     nudge_kills = true;
+    nudge_dump_exec_phase = false;
 
     for (i = 1 /*skip client*/; i < argc; i++) {
         token = argv[i];
@@ -136,6 +151,8 @@ options_init(client_id_t id, int argc, const char *argv[], drcovlib_options_t *o
             nudge_kills = false;
         else if (strcmp(token, "-nudge_kills") == 0)
             nudge_kills = true;
+        else if (strcmp(token, "-nudge_dump") == 0)
+            nudge_dump_exec_phase = true;
         else if (strcmp(token, "-logdir") == 0) {
             USAGE_CHECK((i + 1) < argc, "missing logdir path");
             ops->logdir = argv[++i];
@@ -189,7 +206,8 @@ dr_client_main(client_id_t id, int argc, const char *argv[])
     if (nudge_kills) {
         drx_register_soft_kills(event_soft_kill);
         dr_register_nudge_event(event_nudge, id);
-    }
+    } else if (nudge_dump_exec_phase)
+        dr_register_nudge_event(event_nudge, id);
 
     dr_register_exit_event(event_exit);
 }

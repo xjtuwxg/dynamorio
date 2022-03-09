@@ -185,6 +185,10 @@ drcovlib_status_t
 drcovlib_exit(void);
 
 DR_EXPORT
+drcovlib_status_t
+drcovlib_dump_exec_phase(void);
+
+DR_EXPORT
 /**
  * Returns the name of the log file for this process (or for the thread
  * specified by \p drcontext, if #DRCOVLIB_THREAD_PRIVATE is in effect).
